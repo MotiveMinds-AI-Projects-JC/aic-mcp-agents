@@ -2,10 +2,13 @@
 import os
 
 # Pydantic settings for structured configuration management
+# This helps us define configuration variables in a clean, validated way
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Cloud Foundry environment utility
+# Used to read service bindings when app runs in Cloud Foundry
 from cfenv import AppEnv
+
 
 # -------------------------
 # SETTINGS CLASS
@@ -14,30 +17,45 @@ class Settings(BaseSettings):
     """
     Application configuration class using Pydantic.
 
-    - Automatically reads values from environment variables or .env file
-    - Provides type validation and default values
+    What this class does:
+    - Automatically reads values from environment variables
+    - Can also read from a `.env` file (useful for local development)
+    - Validates types (e.g., ensures strings, booleans, etc.)
+    - Provides default values where needed
     """
-    # DAR Service (Data Attribute Recommendation System)
-    DAR_DEPLOYMENT_URL : str
-    DAR_BASE_URL : str
-    DAR_CLIENT_ID : str
-    DAR_CLIENT_SECRET : str
-    DAR_AUTH_URL : str
-    # RAG Endpoint
-    RAG_ENDPOINT : str
-    #S/4HANA URL
-    BASE_URL : str
-    USER : str
-    PASSWORD : str
-    DEBUG: bool = True  # Default debug mode (True for local development)
 
     # -------------------------
-    # PYDANTIC CONFIG
+    # DAR Service (Data Attribute Recommendation System)
     # -------------------------
-    # Configure Pydantic to load environment variables from .env file
+    # These values are expected to come from environment variables
+    DAR_DEPLOYMENT_URL: str
+    DAR_BASE_URL: str
+    DAR_CLIENT_ID: str
+    DAR_CLIENT_SECRET: str
+    DAR_AUTH_URL: str
+
+    # -------------------------
+    # RAG Endpoint
+    # -------------------------
+    RAG_ENDPOINT: str
+
+    # -------------------------
+    # S/4HANA Credentials
+    # -------------------------
+    BASE_URL: str
+    USER: str
+    PASSWORD: str
+
+    # Debug flag (True by default for local development)
+    DEBUG: bool = True
+
+    # -------------------------
+    # PYDANTIC CONFIGURATION
+    # -------------------------
+    # This tells Pydantic to load variables from a `.env` file
     model_config = SettingsConfigDict(
-        env_file=".env",           # Path to .env file
-        env_file_encoding="utf-8" # Encoding format
+        env_file=".env",            # File to load environment variables from
+        env_file_encoding="utf-8"   # Encoding format of the file
     )
 
 
@@ -46,67 +64,79 @@ class Settings(BaseSettings):
 # -------------------------
 def get_settings() -> Settings:
     """
-    Load application settings based on environment.
+    Load application settings based on the environment.
 
-    - Detects if running in Cloud Foundry (CF)
-    - If CF: fetch credentials from bound services
-    - Else: load from local .env file
+    This function decides:
+    - If running in Cloud Foundry → load from service bindings
+    - Else → load from local `.env` file
 
     Returns:
-        Settings: Configured settings object
+        Settings: Fully initialized configuration object
     """
 
-    # Detect Cloud Foundry environment via VCAP_SERVICES variable
+    # Check if app is running in Cloud Foundry
+    # Cloud Foundry automatically sets this environment variable
     is_cf = 'VCAP_SERVICES' in os.environ
-    
+
 
     # -------------------------
     # CLOUD FOUNDRY ENVIRONMENT
     # -------------------------
     if is_cf:
 
-        # Initialize Cloud Foundry environment helper
+        # Create Cloud Foundry environment helper
         cf_env = AppEnv()
 
-        # Retrieve AI Core service binding
+        # Get the AI Core service bound to the app
+        # 'label' should match the service name in CF
         ai_service = cf_env.get_service(label='aicore')
 
         # -------------------------
         # SET AI CORE ENV VARIABLES
         # -------------------------
-        # These are required for Gen AI Hub / AI Core authentication
+        # These values are extracted from the service credentials
+        # and stored in environment variables so the app can use them
+
         os.environ['AICORE_AUTH_URL'] = ai_service.credentials['url']
         os.environ['AICORE_CLIENT_ID'] = ai_service.credentials['clientid']
         os.environ['AICORE_CLIENT_SECRET'] = ai_service.credentials['clientsecret']
 
         # Construct base API URL for AI Core
-        os.environ['AICORE_BASE_URL'] = f'{ai_service.credentials['serviceurls'].get('AI_API_URL')}/v2'
+        # Example: https://.../v2
+        os.environ['AICORE_BASE_URL'] = f"{ai_service.credentials['serviceurls'].get('AI_API_URL')}/v2"
 
 
         # -------------------------
         # RETURN SETTINGS FROM CF
         # -------------------------
-        # Override only values that must come from CF services
-        return Settings (
-            DAR_DEPLOYMENT_URL = os.getenv("DAR_DEPLOYMENT_URL"),
-            DAR_BASE_URL = os.getenv("DAR_BASE_URL"),
-            DAR_CLIENT_ID = os.getenv("DAR_CLIENT_ID"),
-            DAR_CLIENT_SECRET = os.getenv("DAR_CLIENT_SECRET"),
-            DAR_AUTH_URL = os.getenv("DAR_AUTH_URL"),
+        # Here we explicitly pass values from environment variables
+        # into the Settings object
+
+        return Settings(
+            DAR_DEPLOYMENT_URL=os.getenv("DAR_DEPLOYMENT_URL"),
+            DAR_BASE_URL=os.getenv("DAR_BASE_URL"),
+            DAR_CLIENT_ID=os.getenv("DAR_CLIENT_ID"),
+            DAR_CLIENT_SECRET=os.getenv("DAR_CLIENT_SECRET"),
+            DAR_AUTH_URL=os.getenv("DAR_AUTH_URL"),
+
             # RAG Endpoint
-            RAG_ENDPOINT =os.getenv("RAG_ENDPOINT"),
-            #S/4HANA URL,
-            BASE_URL =os.getenv("BASE_URL"),
-            USER =os.getenv("USER"),
-            PASSWORD =os.getenv("PASSWORD"),
-            # Disable debug in production
-            DEBUG = False
+            RAG_ENDPOINT=os.getenv("RAG_ENDPOINT"),
+
+            # S/4HANA credentials
+            BASE_URL=os.getenv("BASE_URL"),
+            USER=os.getenv("USER"),
+            PASSWORD=os.getenv("PASSWORD"),
+
+            # Disable debug mode in production
+            DEBUG=False
         )
+
     # -------------------------
     # LOCAL ENVIRONMENT
     # -------------------------
     else:
-        # Load settings from .env file and environment variables
+        # If NOT running in Cloud Foundry:
+        # Load values from `.env` file or system environment variables
         base_settings = Settings()
 
     return base_settings
@@ -115,6 +145,6 @@ def get_settings() -> Settings:
 # -------------------------
 # GLOBAL SETTINGS INSTANCE
 # -------------------------
-# Initialize settings once and reuse across application
+# This creates a single shared instance of Settings
+# so the whole application can reuse it without reloading each time
 settings = get_settings()
-
