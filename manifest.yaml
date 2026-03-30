@@ -1,0 +1,10 @@
+---
+applications:
+- name: aic-mcp-agents
+  random-route: true
+  memory: 128M
+  path: ./
+  buildpacks:
+  - python_buildpack
+  services:
+  - AI_Core_Extended
