@@ -21,7 +21,6 @@ from config import settings
 from sap.aibus.dar.client.inference_client import InferenceClient
 
 
-
 # -------------------------
 # DEFAULT MRP DICTIONARY TEMPLATE
 # -------------------------
@@ -33,7 +32,7 @@ mrp_dict = {
     "Area": "",
     "Plant": "",
     "Planned_Order": "",
-    "Purchase_Requisition": ""
+    "Purchase_Requisition": "",
 }
 
 
@@ -66,7 +65,10 @@ def get_mrp_plannedorder(planned_order: str) -> dict:
     # Construct API URL dynamically using planned order
     # This follows SAP A2X service pattern (srvd_a2x)
     # Endpoint suggests a standard S/4HANA Cloud API for Planned Orders
-    URL = BASE_URL + f"api_plannedorder/srvd_a2x/sap/plannedorder/0001/PlannedOrderHeader/{planned_order}"
+    URL = (
+        BASE_URL
+        + f"api_plannedorder/srvd_a2x/sap/plannedorder/0001/PlannedOrderHeader/{planned_order}"
+    )
 
     # Send GET request with basic authentication
     # In production:
@@ -96,10 +98,7 @@ def get_mrp_plannedorder(planned_order: str) -> dict:
     # This creates a chained API call pattern:
     # Planned Order → derive MRP context → fetch pegged requirements
     return get_pegged_requirements_for_mrp2(
-        mrp_dict['Material'],
-        mrp_dict['Plant'],
-        mrp_dict['Area'],
-        mrp_dict['PO/PR']
+        mrp_dict["Material"], mrp_dict["Plant"], mrp_dict["Area"], mrp_dict["PO/PR"]
     )
 
 
@@ -119,7 +118,10 @@ def get_mrp_purchaserequisition(purchase_req: str) -> dict:
     # Construct API URL
     # Note: This endpoint fetches Purchase Requisition items (not header)
     # "_PurchaseRequisitionItem" indicates navigation to item-level entity
-    URL = BASE_URL + f"api_purchaserequisition_2/srvd_a2x/sap/purchaserequisition/0001/PurchaseReqn/{purchase_req}/_PurchaseRequisitionItem"
+    URL = (
+        BASE_URL
+        + f"api_purchaserequisition_2/srvd_a2x/sap/purchaserequisition/0001/PurchaseReqn/{purchase_req}/_PurchaseRequisitionItem"
+    )
 
     # Send API request
     response = requests.get(url=URL, auth=(USER, PASSWORD))
@@ -146,17 +148,16 @@ def get_mrp_purchaserequisition(purchase_req: str) -> dict:
 
     # Call pegged requirements function
     return get_pegged_requirements_for_mrp2(
-        mrp_dict['Material'],
-        mrp_dict['Plant'],
-        mrp_dict['Area'],
-        mrp_dict['PO/PR']
+        mrp_dict["Material"], mrp_dict["Plant"], mrp_dict["Area"], mrp_dict["PO/PR"]
     )
 
 
 # -------------------------
 # TOOL: GET PEGGED REQUIREMENTS (WITH PR/PO)
 # -------------------------
-def get_pegged_requirements_for_mrp2(Material: str, Plant: str, Area: str, PR: str = 'XXXXXXXXXX'):
+def get_pegged_requirements_for_mrp2(
+    Material: str, Plant: str, Area: str, PR: str = "XXXXXXXXXX"
+):
     """
     Fetch pegged requirements for a material.
 
@@ -172,7 +173,10 @@ def get_pegged_requirements_for_mrp2(Material: str, Plant: str, Area: str, PR: s
     # Construct API URL with query parameters
     # This uses SAP function import style (GET with parameters encoded in URL)
     # %27 represents URL-encoded single quote (')
-    URL = BASE_URL + f"zmm_sb_joule_pegged/srvd_a2x/sap/zmm_sd_joule_pegged/0001/ZMM_C_PEGGED_USE_CASE/SAP__self.getpeggedrequirements(Material=%27{Material}%27,MRPArea=%27{Area}%27,MRPPlant=%27{Plant}%27,PlannedOrder=%27{PR}%27)"
+    URL = (
+        BASE_URL
+        + f"zmm_sb_joule_pegged/srvd_a2x/sap/zmm_sd_joule_pegged/0001/ZMM_C_PEGGED_USE_CASE/SAP__self.getpeggedrequirements(Material=%27{Material}%27,MRPArea=%27{Area}%27,MRPPlant=%27{Plant}%27,PlannedOrder=%27{PR}%27)"
+    )
 
     # Send request
     response = requests.get(url=URL, auth=(USER, PASSWORD))
@@ -205,7 +209,10 @@ def get_pegged_requirements_for_mrp(Material: str, Plant: str, Area: str):
 
     # Same API as above, but PlannedOrder parameter is hardcoded
     # This allows querying pegged requirements purely by MRP context
-    URL = BASE_URL + f"zmm_sb_joule_pegged/srvd_a2x/sap/zmm_sd_joule_pegged/0001/ZMM_C_PEGGED_USE_CASE/SAP__self.getpeggedrequirements(Material=%27{Material}%27,MRPArea=%27{Area}%27,MRPPlant=%27{Plant}%27,PlannedOrder=%27XXXXXXXXXX%27)"
+    URL = (
+        BASE_URL
+        + f"zmm_sb_joule_pegged/srvd_a2x/sap/zmm_sd_joule_pegged/0001/ZMM_C_PEGGED_USE_CASE/SAP__self.getpeggedrequirements(Material=%27{Material}%27,MRPArea=%27{Area}%27,MRPPlant=%27{Plant}%27,PlannedOrder=%27XXXXXXXXXX%27)"
+    )
 
     response = requests.get(url=URL, auth=(USER, PASSWORD))
 
@@ -228,8 +235,6 @@ def get_pegged_requirements_for_mrp(Material: str, Plant: str, Area: str):
 # print(get_pegged_requirements_for_mrp2("KKR001", '1810',"1810"))
 
 
-
-
 # -------------------------
 # TOOL: PREDICT GL ACCOUNT
 # -------------------------
@@ -243,7 +248,7 @@ def predict_gl(
     Vendor: str,
     DocumentType: str,
     PostingDate: str,
-    TaxCode: str
+    TaxCode: str,
 ):
     """
     Calls SAP DAR (Data Attribute Recommendation) model
@@ -289,35 +294,33 @@ def predict_gl(
         {
             "objectId": "optional-identifier-1",
             "features": [
-                {"name": "BUKRS", "value": Company_Code},     # Company Code
+                {"name": "BUKRS", "value": Company_Code},  # Company Code
                 {"name": "BELNR", "value": Document_Number},  # Document Number
-                {"name": "GJAHR", "value": Fiscal Year},      # Fiscal Year
-                {"name": "BUZEI", "value": LineItem},         # Line Item
-                {"name": "KOART", "value": AccountType},      # Account Type
-                {"name": "WRBTR", "value": Amount},           # Amount
-                {"name": "LIFNR", "value": Vendor},           # Vendor
-                {"name": "BLART", "value": DocumentType},     # Document Type
-                {"name": "BUDAT", "value": PostingDate},      # Posting Date
-                {"name": "MWSKZ", "value": TaxCode}           # Tax Code
-            ]
+                {"name": "GJAHR", "value": Fiscal_Year},  # Fiscal Year
+                {"name": "BUZEI", "value": LineItem},  # Line Item
+                {"name": "KOART", "value": AccountType},  # Account Type
+                {"name": "WRBTR", "value": Amount},  # Amount
+                {"name": "LIFNR", "value": Vendor},  # Vendor
+                {"name": "BLART", "value": DocumentType},  # Document Type
+                {"name": "BUDAT", "value": PostingDate},  # Posting Date
+                {"name": "MWSKZ", "value": TaxCode},  # Tax Code
+            ],
         }
     ]
 
     # Send inference request to model
     # top_n=3 returns top 3 predicted GL accounts with confidence scores
     inference_response = inference_client.create_inference_request_with_url(
-        url=DEPLOYMENT_URL,
-        objects=objects_to_be_classified,
-        top_n=3
+        url=DEPLOYMENT_URL, objects=objects_to_be_classified, top_n=3
     )
 
     # Extract predictions safely
     # Defensive pattern but incomplete (see note below)
-    if inference_response.get('predictions'):
-        labels = inference_response['predictions'][0].get('labels', [])
+    if inference_response.get("predictions"):
+        labels = inference_response["predictions"][0].get("labels", [])
 
     if labels:
-        results = labels[0].get('results', [])
+        results = labels[0].get("results", [])
 
     # Returns list of predicted GL accounts
     return results
