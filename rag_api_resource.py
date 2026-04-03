@@ -8,7 +8,7 @@ from config import settings
 # -------------------------
 # FUNCTION: GET ANSWERS FROM RAG SYSTEM
 # -------------------------
-def get_answers(query: str) -> str:
+def get_answers_using_rag(query: str) -> str:
     """
     Send a user query to a RAG (Retrieval-Augmented Generation) API
     and return the generated response.
@@ -35,7 +35,6 @@ def get_answers(query: str) -> str:
     # ?message=your_query
     params = {
         "message": query
-
         # Optional: session_id can be used to maintain conversation context
         # "session_id": "optional-existing-session-id"
     }

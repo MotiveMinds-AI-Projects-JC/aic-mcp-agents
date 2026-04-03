@@ -7,10 +7,10 @@ import os
 
 # Import your custom agent logic
 # This is likely where your core business logic or orchestration happens
-from agent import agent
+from sapCustomAgents import sap_pegged_requirement_agent
 
 # Import function that calls RAG (Retrieval-Augmented Generation) system
-from resource import get_answers
+from rag_api_resource import get_answers_using_rag
 
 # Import function that performs GL (General Ledger) prediction using ML model
 from tools import predict_gl
@@ -28,7 +28,7 @@ mcp = FastMCP("Pegged-Requirements-Tool")
 # TOOL 1: ECHO / MAIN AGENT TOOL
 # -------------------------
 @mcp.tool()
-def echo(query: str) -> str:
+def pegged_requirements_from_SAP(query: str) -> str:
     """
     Tool exposed via MCP.
 
@@ -45,7 +45,7 @@ def echo(query: str) -> str:
     """
 
     # Call your agent function with user query
-    result = agent(query)
+    result = sap_pegged_requirement_agent(query)
 
     # Return formatted result
     return f"Result: {result}"
@@ -69,7 +69,7 @@ def get_company_policies(query: str) -> str:
     """
 
     # Call RAG API function
-    result = get_answers(query)
+    result = get_answers_using_rag(query)
 
     # Return response from RAG system
     return result
@@ -89,7 +89,7 @@ def get_gl_prediction(
     Vendor: str,
     DocumentType: str,
     PostingDate: str,
-    TaxCode: str
+    TaxCode: str,
 ):
     """
     Tool to predict General Ledger (GL) account.
@@ -114,7 +114,7 @@ def get_gl_prediction(
         Vendor,
         DocumentType,
         PostingDate,
-        TaxCode
+        TaxCode,
     )
 
     # Return prediction results
@@ -140,8 +140,4 @@ if __name__ == "__main__":
     # transport="http" → exposes tools over HTTP
     # host="0.0.0.0" → makes server accessible from any network interface
     # port=port → uses configured port
-    mcp.run(
-        transport="http",
-        host="0.0.0.0",
-        port=port
-    )
+    mcp.run(transport="http", host="0.0.0.0", port=port)
